@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="AspectRatioViewGroup">
+        <attr name="aspectX" format="integer" />
+        <attr name="aspectY" format="integer" />
+    </declare-styleable>
+</resources>
