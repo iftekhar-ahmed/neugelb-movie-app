@@ -30,6 +30,11 @@ class MoviesListAdapter(
         return modified
     }
 
+    fun clearItems() {
+        items.clear()
+        notifyDataSetChanged()
+    }
+
     fun getItem(position: Int): MinimalMovie {
         return items[position]
     }

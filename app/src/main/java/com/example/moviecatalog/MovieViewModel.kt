@@ -13,6 +13,7 @@ import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import retrofit2.Response
 
 /**
  * Created by Iftekhar Ahmed on 30/06/2021.
@@ -31,31 +32,53 @@ class MovieViewModel(private val movieRepository: MovieRepository) : ViewModel()
     val movie: LiveData<Movie>
         get() = _movie
 
-    var configuration: Configuration? = null
-        private set
-
-    var isLoading = false
-        private set
+    private val _isLoading by lazy { MutableLiveData<Boolean>() }
+    val isLoading: LiveData<Boolean>
+        get() = _isLoading
 
     val hasPage: Boolean = _movies.value?.let { it.page < it.totalPages } ?: true
 
+    var searchQuery: String? = null
+        private set
+
+    var configuration: Configuration? = null
+        private set
+
     private fun fetchConfiguration(callback: () -> Unit) {
-        isLoading = false
+        _isLoading.value = false
         // One-time fetching of image base URLs and available poster sizes from /configuration API
         viewModelScope.launch(Dispatchers.IO) {
             val response = movieRepository.getConfiguration()
-            if (response.isSuccessful) {
-                configuration = response.body()
-                callback()
-            } else {
-                _error.value = parseError(response.errorBody()?.string())
+            withContext(Dispatchers.Main) {
+                if (response.isSuccessful) {
+                    configuration = response.body()
+                    callback()
+                } else {
+                    _error.value = parseError(response.errorBody()?.string())
+                }
+                _isLoading.value = false
             }
-            isLoading = false
+        }
+    }
+
+    private fun handleMoviesListResponse(
+        response: Response<MoviesListResponse>,
+        success: (MoviesListResponse) -> Unit
+    ) {
+        if (response.isSuccessful) {
+            val moviesListResponse = response.body() as MoviesListResponse
+            val imageConfig = (configuration as Configuration).images
+            moviesListResponse.results.forEach { movie ->
+                movie.fullPosterPath = "${imageConfig.baseUrl}${imageConfig.posterSize}${movie.posterPath}"
+            }
+            success(moviesListResponse)
+        } else {
+            _error.value = parseError(response.errorBody()?.string())
         }
     }
 
     fun getMovie(id: String, configuration: Configuration) {
-        isLoading = true
+        _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
             val response = movieRepository.getMovieDetails(id)
             withContext(Dispatchers.Main) {
@@ -68,30 +91,44 @@ class MovieViewModel(private val movieRepository: MovieRepository) : ViewModel()
                 } else {
                     _error.value = parseError(response.errorBody()?.string())
                 }
+                _isLoading.value = false
             }
         }
     }
 
     fun getMovies() {
-        isLoading = true
+        _isLoading.value = true
         configuration?.let {
             viewModelScope.launch(Dispatchers.IO) {
                 val response = movieRepository.getLatestMovies(_movies.value?.nextPage?.toString() ?: "1")
                 withContext(Dispatchers.Main) {
-                    if (response.isSuccessful) {
-                        val moviesListResponse = response.body() as MoviesListResponse
-                        val imageConfig = (configuration as Configuration).images
-                        moviesListResponse.results.forEach { movie ->
-                            movie.fullPosterPath = "${imageConfig.baseUrl}${imageConfig.posterSize}${movie.posterPath}"
-                        }
-                        _movies.value = moviesListResponse
-                    } else {
-                        _error.value = parseError(response.errorBody()?.string())
+                    handleMoviesListResponse(response) {
+                        _movies.value = it
                     }
-                    isLoading = false
+                    _isLoading.value = false
                 }
             }
         } ?: fetchConfiguration { getMovies() }
+    }
+
+    fun searchMovies(query: String?) {
+        searchQuery = query
+        if (query.isNullOrBlank()) {
+            _movies.value = MoviesListResponse(0, arrayOf(), 0, 0)
+            return
+        }
+        _isLoading.value = true
+        configuration?.let {
+            viewModelScope.launch(Dispatchers.IO) {
+                val response = movieRepository.searchMovies(query, _movies.value?.nextPage?.toString() ?: "1")
+                withContext(Dispatchers.Main) {
+                    handleMoviesListResponse(response) {
+                        _movies.value = it
+                    }
+                    _isLoading.value = false
+                }
+            }
+        } ?: fetchConfiguration { searchMovies(query) }
     }
 
     private fun parseError(json: String?): String = Gson().fromJson(json,ApiError::class.java).status

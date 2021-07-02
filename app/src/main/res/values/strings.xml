@@ -5,4 +5,5 @@
     <string name="pages_count">Loaded page %1$d of %2$d</string>
     <string name="movie_runtime">%1$d hr %2$d mins</string>
     <string name="genres">Genres: %1$s</string>
+    <string name="search_title">Search Movies</string>
 </resources>

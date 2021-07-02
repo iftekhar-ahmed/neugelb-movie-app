@@ -1,15 +1,21 @@
 package com.example.moviecatalog.view
 
+import android.app.SearchManager
 import android.content.Intent
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SearchView
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.moviecatalog.*
 import com.example.moviecatalog.data.models.MinimalMovie
 import kotlinx.android.synthetic.main.activity_main.*
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -28,6 +34,13 @@ class MainActivity : AppCompatActivity() {
                 )
             }
         })
+    }
+
+    private fun handleIntent(intent: Intent) {
+        if (Intent.ACTION_SEARCH == intent.action) {
+            val query = intent.getStringExtra(SearchManager.QUERY)
+            viewModel.searchMovies(query)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,16 +64,28 @@ class MainActivity : AppCompatActivity() {
                 val gridLayoutManager = recyclerView.layoutManager as GridLayoutManager
                 if (dy > 0
                     && gridLayoutManager.findLastVisibleItemPosition() + 1 >= gridLayoutManager.itemCount
-                    && !viewModel.isLoading
+                    && viewModel.isLoading.value == false
                     && viewModel.hasPage
                 ) {
-                    viewModel.getMovies()
+                    if (viewModel.searchQuery.isNullOrBlank()) {
+                        viewModel.getMovies()
+                    } else {
+                        viewModel.searchMovies(viewModel.searchQuery)
+                    }
                 }
             }
         })
 
+        viewModel.isLoading.observe(this, { isLoading ->
+            progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        })
+
         viewModel.movies.observe(this, { moviesListResponse ->
-            adapter.addItems(moviesListResponse.results)
+            if (moviesListResponse.results.isEmpty()) {
+                adapter.clearItems()
+            } else {
+                adapter.addItems(moviesListResponse.results)
+            }
             resultsCount.text = getString(R.string.results_count, moviesListResponse.totalResults)
             pagesCount.text = getString(
                 R.string.pages_count,
@@ -74,5 +99,36 @@ class MainActivity : AppCompatActivity() {
         })
 
         viewModel.getMovies()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu, menu)
+
+        // Associate searchable configuration with the SearchView
+        val searchManager = getSystemService(SEARCH_SERVICE) as SearchManager
+        (menu.findItem(R.id.search)).apply {
+            (actionView as SearchView).apply {
+                setSearchableInfo(searchManager.getSearchableInfo(componentName))
+            }
+            setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
+                override fun onMenuItemActionCollapse(p0: MenuItem?): Boolean {
+                    viewModel.searchMovies("") // this resets search results
+                    viewModel.getMovies()
+                    return true
+                }
+
+                override fun onMenuItemActionExpand(p0: MenuItem?): Boolean {
+                    viewModel.searchMovies("") // this resets the latest movies list
+                    return true
+                }
+            })
+        }
+
+        return true
     }
 }
