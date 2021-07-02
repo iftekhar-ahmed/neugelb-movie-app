@@ -1,10 +1,12 @@
-package com.example.moviecatalog
+package com.example.moviecatalog.view
 
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.example.moviecatalog.R
 import com.example.moviecatalog.data.models.MinimalMovie
+import com.example.moviecatalog.inflate
 import com.squareup.picasso.Picasso
 
 /**

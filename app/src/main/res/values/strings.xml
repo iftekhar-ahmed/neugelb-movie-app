@@ -3,4 +3,6 @@
     <string name="results_count">%1$d results</string>
     <string name="lates_movies">Latest Movies</string>
     <string name="pages_count">Loaded page %1$d of %2$d</string>
+    <string name="movie_runtime">%1$d hr %2$d mins</string>
+    <string name="genres">Genres: %1$s</string>
 </resources>

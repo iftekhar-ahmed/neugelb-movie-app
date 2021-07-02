@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.example.moviecatalog.AspectRatioCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.example.moviecatalog.view.AspectRatioCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/cardView"
@@ -20,7 +20,7 @@
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:scaleType="centerCrop"
-            android:src="@drawable/tools_movie_poster"
+            android:src="@drawable/fnf_poster"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -40,4 +40,4 @@
             app:layout_constraintStart_toStartOf="parent"
             tools:text="Fast &amp; Furious" />
     </androidx.constraintlayout.widget.ConstraintLayout>
-</com.example.moviecatalog.AspectRatioCardView>
+</com.example.moviecatalog.view.AspectRatioCardView>

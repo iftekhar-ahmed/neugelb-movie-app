@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.moviecatalog.data.MovieRepository
 import com.example.moviecatalog.data.models.Configuration
+import com.example.moviecatalog.data.models.Movie
 import com.example.moviecatalog.service.ApiError
 import com.example.moviecatalog.service.MoviesListResponse
 import com.google.gson.Gson
@@ -26,29 +27,48 @@ class MovieViewModel(private val movieRepository: MovieRepository) : ViewModel()
     val movies: LiveData<MoviesListResponse>
         get() = _movies
 
-    private var configuration: Configuration? = null
+    private val _movie by lazy { MutableLiveData<Movie>() }
+    val movie: LiveData<Movie>
+        get() = _movie
+
+    var configuration: Configuration? = null
+        private set
 
     var isLoading = false
         private set
 
     val hasPage: Boolean = _movies.value?.let { it.page < it.totalPages } ?: true
 
-    private fun fetchConfiguration() {
+    private fun fetchConfiguration(callback: () -> Unit) {
         isLoading = false
         // One-time fetching of image base URLs and available poster sizes from /configuration API
         viewModelScope.launch(Dispatchers.IO) {
             val response = movieRepository.getConfiguration()
             if (response.isSuccessful) {
                 configuration = response.body()
-                getMovies()
+                callback()
             } else {
-                _error.value =
-                    Gson().fromJson(
-                        response.errorBody()?.string(),
-                        ApiError::class.java
-                    ).status
+                _error.value = parseError(response.errorBody()?.string())
             }
             isLoading = false
+        }
+    }
+
+    fun getMovie(id: String, configuration: Configuration) {
+        isLoading = true
+        viewModelScope.launch(Dispatchers.IO) {
+            val response = movieRepository.getMovieDetails(id)
+            withContext(Dispatchers.Main) {
+                if (response.isSuccessful) {
+                    val movie = response.body() as Movie
+                    val imageConfig = configuration.images
+                    movie.fullPosterPath = "${imageConfig.baseUrl}${imageConfig.posterSize}${movie.posterPath}"
+                    movie.fullBackdropPath = "${imageConfig.baseUrl}${imageConfig.backdropSize}${movie.backdropPath}"
+                    _movie.value = movie
+                } else {
+                    _error.value = parseError(response.errorBody()?.string())
+                }
+            }
         }
     }
 
@@ -66,15 +86,13 @@ class MovieViewModel(private val movieRepository: MovieRepository) : ViewModel()
                         }
                         _movies.value = moviesListResponse
                     } else {
-                        _error.value =
-                            Gson().fromJson(
-                                response.errorBody()?.string(),
-                                ApiError::class.java
-                            ).status
+                        _error.value = parseError(response.errorBody()?.string())
                     }
                     isLoading = false
                 }
             }
-        } ?: fetchConfiguration()
+        } ?: fetchConfiguration { getMovies() }
     }
+
+    private fun parseError(json: String?): String = Gson().fromJson(json,ApiError::class.java).status
 }

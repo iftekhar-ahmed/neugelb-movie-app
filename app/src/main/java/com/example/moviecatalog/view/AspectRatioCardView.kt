@@ -1,8 +1,9 @@
-package com.example.moviecatalog
+package com.example.moviecatalog.view
 
 import android.content.Context
 import android.util.AttributeSet
 import androidx.cardview.widget.CardView
+import com.example.moviecatalog.R
 
 /**
  * Created by Iftekhar on 5/16/18.

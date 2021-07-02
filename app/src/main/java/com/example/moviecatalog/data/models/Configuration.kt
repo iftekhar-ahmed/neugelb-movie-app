@@ -1,20 +1,34 @@
 package com.example.moviecatalog.data.models
 
+import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
+import kotlinx.android.parcel.Parcelize
 
 /**
  * Created by Iftekhar Ahmed on 02/07/2021.
  */
+
+@Parcelize
 data class Configuration(
     val images: Images
-) {
+): Parcelable {
+    @Parcelize
     data class Images(
         @SerializedName("base_url") val baseUrl: String,
+        @SerializedName("backdrop_sizes") val backdropSizes: Array<String>,
         @SerializedName("poster_sizes") val posterSizes: Array<String>
-    ) {
+    ): Parcelable {
         companion object {
+            const val BACKDROP_SIZE_W780 = "w780"
             const val POSTER_SIZE_W500 = "w500"
         }
+
+        val backdropSize
+            get(): String {
+                return if (backdropSizes.contains(BACKDROP_SIZE_W780))
+                    BACKDROP_SIZE_W780
+                else backdropSizes.last()
+            }
 
         val posterSize
             get(): String {

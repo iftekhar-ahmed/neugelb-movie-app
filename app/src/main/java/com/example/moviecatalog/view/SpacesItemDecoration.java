@@ -1,4 +1,4 @@
-package com.example.moviecatalog;
+package com.example.moviecatalog.view;
 
 import android.graphics.Rect;
 import android.view.View;
